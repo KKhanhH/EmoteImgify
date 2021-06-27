@@ -10,8 +10,22 @@ cmdPrefix = '^'
 redirect_uri='http://localhost'
 twitch_token_auth_url='https://id.twitch.tv/oauth2/token'
 twitch_users_api='https://api.twitch.tv/helix/users'
+twitch_validate_api='https://id.twitch.tv/oauth2/validate'
+
 
 client = discord.Client()
+
+def validate_access_token(access_token):
+    """Validates that the app access token has not yet expired,
+    if access token has expired, grabs a new one
+
+    Returns: None
+    """
+    token_header = {'Authorization': 'OAuth ' + access_token}
+    response = requests.get(twitch_validate_api, headers=token_header)
+    if response.ok:
+        return access_token
+    get_twitch_app_access_token()
 
 
 def get_twitch_app_access_token():
