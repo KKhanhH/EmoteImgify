@@ -9,6 +9,7 @@ cmdPrefix = '^'
 
 redirect_uri='http://localhost'
 twitch_token_auth_url='https://id.twitch.tv/oauth2/token'
+twitch_users_api='https://api.twitch.tv/helix/users'
 
 client = discord.Client()
 
@@ -30,6 +31,21 @@ def get_twitch_app_access_token():
     access_token = response_dict['access_token']
     print(response_dict)
     return access_token
+
+def get_channelID(access_token, channel_name):
+    """Makes a call to Twitch API to get an user's channel ID from their name
+
+    Param channel_name: The channel name of the user to lookup (String)
+    
+    Returns: The app access token from the API response (String)
+    """
+    user_param={'login': channel_name}
+    token_header = {'Authorization': 'Bearer ' + access_token}
+    response = requests.post(twitch_token_auth_url, params=user_param, headers=token_header)
+    response_dict = response.json()
+    channel_id = response_dict['id']
+    return channel_id
+
 @client.event
 async def on_ready():
     print('Logged on as {0}!'.format(client.user))
