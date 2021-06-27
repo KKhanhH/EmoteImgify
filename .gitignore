@@ -130,5 +130,5 @@ dmypy.json
 
 # Replit things
 .replit
-.lock
-.toml
+*.lock
+*.toml
