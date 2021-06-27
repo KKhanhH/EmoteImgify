@@ -2,6 +2,8 @@ import discord
 import os
 import requests
 from dotenv import load_dotenv
+from discord.ext import commands
+
 
 load_dotenv()
 
@@ -11,9 +13,10 @@ twitch_users_api='https://api.twitch.tv/helix/users'
 twitch_validate_api='https://id.twitch.tv/oauth2/validate'
 twitch_emote_api='https://api.twitch.tv/helix/chat/emotes'
 
-class BotClient(discord.Client):
+twitch_animated_emote_url= lambda emote_id: 'https://static-cdn.jtvnw.net/emoticons/v2/' + emote_id + '/default/dark/3.0'
 
-    cmdPrefix = '^'
+class BotClient(commands.Bot):
+
     client_id = os.getenv("TWITCH_CLIENT_ID")
     client_secret = os.getenv("TWITCH_CLIENT_SECRET")
     
@@ -56,9 +59,8 @@ class BotClient(discord.Client):
         
         Returns: The app access token from the API response (String)
         """
-        self.validate_access_token()
         user_param={'login': channel_name}
-        response = requests.get(twitch_users_api, params=user_param, headers=token_header)
+        response = requests.get(twitch_users_api, params=user_param, headers=self.token_header)
         response_dict = response.json()['data'][0]
         channel_id = response_dict['id']
         return channel_id
@@ -71,31 +73,45 @@ class BotClient(discord.Client):
         
         Returns: URL to display requested emote (String)
         """
-        self.validate_access_token()
         param={'broadcaster_id': channel_id}
-        response = requests.get(twitch_emote_api, params=param, headers=token_header)
+        response = requests.get(twitch_emote_api, params=param, headers=self.token_header)
         response_list = response.json()['data']
         for dicts in response_list:
-            if(dicts['name'] == emote_name):
-                return dicts['images']['url_4x']
+            if(dicts['name'].lower() == emote_name.lower()):
+                if(dicts['id'].startswith('emotesv2_')):
+                    url = twitch_animated_emote_url(dicts['id'])
+                else:
+                    url = dicts['images']['url_4x']
+                return url
+            
         return None
 
-    
-    async def on_ready(self):
-        print('Logged on as {0}!'.format(self.user))
-        self.get_twitch_app_access_token()
+cmd_prefix = '^'
+client = BotClient(command_prefix = cmd_prefix)
 
-    async def on_message(self, message):
-        # Ignore messages coming from our own client
-        if (message.author == self.user):
-            return
+@client.event
+async def on_ready():
+    print('Logged on as {0}!'.format(client.user))
+    client.get_twitch_app_access_token()
 
-        if (message.content.startswith(cmdPrefix + 'hello')):
-            await message.channel.send('Hello World!')
+@client.command()
+async def ttv(ctx, channel_name, emote_name):
+    client.validate_access_token()
+    print("Channel Name: " + channel_name + " Emote Name: " + emote_name)
+    channel_id = client.get_channelID(channel_name)
+    print("Channel ID: " + channel_id)
+    emote_URL = client.get_emoteURL(channel_id, emote_name)
+    response_string = emote_URL if emote_URL else "Emote cannot be found"
+    await ctx.send(response_string)
 
-        if (message.content.startswith(cmdPrefix + 'accesstokentest')):
-            get_twitch_app_access_token()
-            await message.channel.send('Printed!')
+@ttv.error
+async def ttv_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        message = f"Missing required argument:  {error.param}"
+    else:
+        message = "Unknown error occured with command!"
+        raise error
 
-client = BotClient()
+    await ctx.send(message, delete_after=5)
+    await ctx.message.delete(delay=5)
 client.run(os.getenv("DISCORD_TOKEN"))
