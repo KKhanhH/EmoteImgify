@@ -101,8 +101,15 @@ class BotClient(commands.Bot):
         Returns: URL to display requested emote (String)
         """
         response = requests.get(bttv_user_api + channel_id)
-        response_list = response.json()['channelEmotes']
-        for emotes in response_list:
+        channel_emotes = response.json()['channelEmotes']
+        shared_emotes = response.json()['sharedEmotes']
+        for emotes in channel_emotes:
+            if (emotes['code'].lower() == emote_name.lower()):
+                url = bttv_emote_url(emotes['id'])
+                if (emotes['imageType'] == 'gif'):
+                    url += '.gif'
+                return url
+        for emotes in shared_emotes:
             if (emotes['code'].lower() == emote_name.lower()):
                 url = bttv_emote_url(emotes['id'])
                 if (emotes['imageType'] == 'gif'):
