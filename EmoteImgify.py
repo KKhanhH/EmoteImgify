@@ -1,10 +1,7 @@
 import os
 import requests
-from dotenv import load_dotenv
 from discord.ext import commands
 from keep_alive import keep_alive
-
-load_dotenv()
 
 redirect_uri = 'http://localhost'
 twitch_token_auth_url = 'https://id.twitch.tv/oauth2/token'
