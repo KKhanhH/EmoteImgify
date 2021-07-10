@@ -184,6 +184,18 @@ async def emote(ctx, channel_name, emote_name):
     response_string = emote_URL if emote_URL else "Emote cannot be found"
     await ctx.send(response_string)
 
+@client.command(aliases=['global'])
+async def _global(ctx, emote_name):
+    client.validate_access_token()
+    print("Emote Name: " + emote_name)
+    emote_URL = client.get_twitch_global_emoteURL(emote_name)
+    # if(emote_URL == None):
+    #     emote_URL = client.get_bttv_global_emoteURL(emote_name)
+    # if(emote_URL == None):
+    #     emote_URL = client.get_ffz_global_emoteURL(emote_name)
+    response_string = emote_URL if emote_URL else "Emote cannot be found"
+    await ctx.send(response_string)
+
 @client.command()
 async def help(ctx):
     await ctx.send("``` HELP \n^emote <Twitch Channel> <Emote> Grab an emote for a specific Twitch channel and send it as an image. Supports Twitch sub emotes, BTTV, and FFZ.```")
