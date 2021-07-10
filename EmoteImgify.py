@@ -1,5 +1,6 @@
 import os
 import requests
+import discord
 from discord.ext import commands
 from keep_alive import keep_alive
 
@@ -10,6 +11,8 @@ twitch_validate_api = 'https://id.twitch.tv/oauth2/validate'
 twitch_emote_api = 'https://api.twitch.tv/helix/chat/emotes'
 bttv_user_api = 'https://api.betterttv.net/3/cached/users/twitch/'
 ffz_user_api = 'https://api.frankerfacez.com/v1/room/id/'
+twitch_global_emote_api = 'https://api.twitch.tv/helix/chat/emotes/global'
+
 
 twitch_animated_emote_url = lambda emote_id: 'https://static-cdn.jtvnw.net/emoticons/v2/' + emote_id + '/default/dark/3.0'
 bttv_emote_url = lambda emote_id: 'https://cdn.betterttv.net/emote/' + emote_id + '/3x'
@@ -134,16 +137,38 @@ class BotClient(commands.Bot):
                 return url
         return None
 
+    def get_twitch_global_emoteURL(self, emote_name):
+      """Makes a call to Twitch API to get a global emote from an emote name
+
+      Param emote_name: The name of the emote (String)
+      
+      Returns: URL to display requested emote (String)
+      """
+      response = requests.get(twitch_global_emote_api,
+                              headers=self.token_header)
+      response_list = response.json()['data']
+      for dicts in response_list:
+          if (dicts['name'].lower() == emote_name.lower()):
+              if (dicts['id'].startswith('emotesv2_')):
+                  url = twitch_animated_emote_url(dicts['id'])
+              else:
+                  url = dicts['images']['url_4x']
+              return url
+      return None
+
 
 cmd_prefix = '^'
-client = BotClient(command_prefix=cmd_prefix)
-
+client = BotClient(command_prefix=cmd_prefix, help_command=None)
 
 @client.event
 async def on_ready():
     print('Logged on as {0}!'.format(client.user))
-    client.get_twitch_app_access_token()
 
+@client.event
+async def on_connect():
+  act = discord.Streaming(name="Do ^help", url="https://twitch.tv/dextinfire")
+  await client.change_presence(activity=act)
+  client.get_twitch_app_access_token()
 
 @client.command()
 async def emote(ctx, channel_name, emote_name):
@@ -159,11 +184,14 @@ async def emote(ctx, channel_name, emote_name):
     response_string = emote_URL if emote_URL else "Emote cannot be found"
     await ctx.send(response_string)
 
+@client.command()
+async def help(ctx):
+    await ctx.send("``` HELP \n^emote <Twitch Channel> <Emote> Grab an emote for a specific Twitch channel and send it as an image. Supports Twitch sub emotes, BTTV, and FFZ.```")
 
 @emote.error
 async def ttv_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
-        message = f"Missing required argument:  {error.param}"
+        message = "Requires both channel name and emote name (in that order)"
     else:
         message = "Unknown error occured with command!"
         raise error
