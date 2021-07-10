@@ -12,7 +12,8 @@ twitch_emote_api = 'https://api.twitch.tv/helix/chat/emotes'
 bttv_user_api = 'https://api.betterttv.net/3/cached/users/twitch/'
 ffz_user_api = 'https://api.frankerfacez.com/v1/room/id/'
 twitch_global_emote_api = 'https://api.twitch.tv/helix/chat/emotes/global'
-
+bttv_global_emotes = 'https://api.betterttv.net/3/cached/emotes/global'
+ffz_global_emote_api = 'https://api.frankerfacez.com/v1/set/global'
 
 twitch_animated_emote_url = lambda emote_id: 'https://static-cdn.jtvnw.net/emoticons/v2/' + emote_id + '/default/dark/3.0'
 bttv_emote_url = lambda emote_id: 'https://cdn.betterttv.net/emote/' + emote_id + '/3x'
@@ -130,8 +131,8 @@ class BotClient(commands.Bot):
         """
         response = requests.get(ffz_user_api + channel_id)
         response_json = response.json()
-        set_id = str(response_json['room']['set'])
-        for emotes in response_json['sets'][set_id]['emoticons']:
+        for sets in response_json['sets'].values():
+          for emotes in sets['emoticons']:
             if (emotes['name'].lower() == emote_name.lower()):
                 url = 'https:' + emotes['urls'][max(emotes['urls'], key=int)]
                 return url
@@ -156,6 +157,34 @@ class BotClient(commands.Bot):
               return url
       return None
 
+    def get_bttv_global_emoteURL(self, emote_name):
+      """Makes a call to BetterTTV API to get a global emote from an emote name
+
+      Param emote_name: The name of the emote (String)
+      
+      Returns: URL to display requested emote (String)
+      """
+      emote_set = requests.get(bttv_global_emotes).json()
+      for emotes in emote_set:
+        if (emotes['code'].lower() == emote_name.lower()):
+          return bttv_emote_url(emotes['id'])
+      return None
+
+    def get_ffz_global_emoteURL(self, emote_name):
+      """Makes a call to FrankerFaceZ API to get a global emote from an emote name
+
+      Param emote_name: The name of the emote (String)
+    
+      Returns: URL to display requested emote (String)
+      """
+      response = requests.get(ffz_global_emote_api)
+      response_json = response.json()
+      for sets in response_json['sets'].values():
+        for emotes in sets['emoticons']:
+          if (emotes['name'].lower() == emote_name.lower()):
+              url = 'https:' + emotes['urls'][max(emotes['urls'], key=int)]
+              return url
+      return None
 
 cmd_prefix = '^'
 client = BotClient(command_prefix=cmd_prefix, help_command=None)
@@ -189,10 +218,10 @@ async def _global(ctx, emote_name):
     client.validate_access_token()
     print("Emote Name: " + emote_name)
     emote_URL = client.get_twitch_global_emoteURL(emote_name)
-    # if(emote_URL == None):
-    #     emote_URL = client.get_bttv_global_emoteURL(emote_name)
-    # if(emote_URL == None):
-    #     emote_URL = client.get_ffz_global_emoteURL(emote_name)
+    if(emote_URL == None):
+        emote_URL = client.get_bttv_global_emoteURL(emote_name)
+    if(emote_URL == None):
+        emote_URL = client.get_ffz_global_emoteURL(emote_name)
     response_string = emote_URL if emote_URL else "Emote cannot be found"
     await ctx.send(response_string)
 
@@ -201,9 +230,20 @@ async def help(ctx):
     await ctx.send("``` HELP \n^emote <Twitch Channel> <Emote> Grab an emote for a specific Twitch channel and send it as an image. Supports Twitch sub emotes, BTTV, and FFZ.```")
 
 @emote.error
-async def ttv_error(ctx, error):
+async def emote_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         message = "Requires both channel name and emote name (in that order)"
+    else:
+        message = "Unknown error occured with command!"
+        raise error
+
+    await ctx.send(message, delete_after=5)
+    await ctx.message.delete(delay=5)
+
+@_global.error
+async def global_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        message = "Missing emote name"
     else:
         message = "Unknown error occured with command!"
         raise error
