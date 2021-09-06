@@ -250,7 +250,7 @@ async def join(ctx):
 async def leave(ctx):
   voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
   if(voice != None):
-    await ctx.send('Left channel: '+ voice.name)
+    await ctx.send('Left channel: '+ voice.channel.name)
     return await voice.disconnect()
 
   return await ctx.send("I am not connected to any voice channel on this server!")
