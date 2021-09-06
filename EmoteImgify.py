@@ -201,55 +201,97 @@ async def on_connect():
 
 @client.command()
 async def emote(ctx, channel_name, emote_name):
-    client.validate_access_token()
-    print("Channel Name: " + channel_name + " Emote Name: " + emote_name)
-    channel_id = client.get_channelID(channel_name)
-    print("Channel ID: " + channel_id)
-    emote_URL = client.get_twitch_emoteURL(channel_id, emote_name)
-    if(emote_URL == None):
-        emote_URL = client.get_bttv_emoteURL(channel_id, emote_name)
-    if(emote_URL == None):
-        emote_URL = client.get_ffz_emoteURL(channel_id, emote_name)
-    response_string = emote_URL if emote_URL else "Emote cannot be found"
-    await ctx.send(response_string)
+  client.validate_access_token()
+  print("Channel Name: " + channel_name + " Emote Name: " + emote_name)
+  channel_id = client.get_channelID(channel_name)
+  print("Channel ID: " + channel_id)
+  emote_URL = client.get_twitch_emoteURL(channel_id, emote_name)
+  if(emote_URL == None):
+      emote_URL = client.get_bttv_emoteURL(channel_id, emote_name)
+  if(emote_URL == None):
+      emote_URL = client.get_ffz_emoteURL(channel_id, emote_name)
+  response_string = emote_URL if emote_URL else "Emote cannot be found"
+  await ctx.send(response_string)
 
 @client.command(aliases=['global'])
 async def _global(ctx, emote_name):
-    client.validate_access_token()
-    print("Emote Name: " + emote_name)
-    emote_URL = client.get_twitch_global_emoteURL(emote_name)
-    if(emote_URL == None):
-        emote_URL = client.get_bttv_global_emoteURL(emote_name)
-    if(emote_URL == None):
-        emote_URL = client.get_ffz_global_emoteURL(emote_name)
-    response_string = emote_URL if emote_URL else "Emote cannot be found"
-    await ctx.send(response_string)
+  client.validate_access_token()
+  print("Emote Name: " + emote_name)
+  emote_URL = client.get_twitch_global_emoteURL(emote_name)
+  if(emote_URL == None):
+      emote_URL = client.get_bttv_global_emoteURL(emote_name)
+  if(emote_URL == None):
+      emote_URL = client.get_ffz_global_emoteURL(emote_name)
+  response_string = emote_URL if emote_URL else "Emote cannot be found"
+  await ctx.send(response_string)
 
 @client.command()
 async def help(ctx):
-    await ctx.send("``` HELP \n^emote <Twitch Channel> <Emote> Grab an emote for a specific Twitch channel and send it as an image. Supports Twitch sub emotes, BTTV, and FFZ.```")
+  await ctx.send("``` HELP \n^emote <Twitch Channel> <Emote> Grab an emote for a specific Twitch channel and send it as an image. Supports Twitch sub emotes, BTTV, and FFZ. \n^global <Emote> Grab an emote from global emotes and send it as an image. Supports Twitch emotes, BTTV, and FFZ.``` \n^join Joins a voice channel \n^leave Leaves a voice channel```")
+
+@client.command()
+async def join(ctx):
+  voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+  if(voice == None):
+    channel = ctx.author.voice.channel
+    if(channel != None):
+      if(channel.permissions_for(ctx.guild.me).connect):
+        await ctx.send('Joining channel: '+ channel.name)
+        await channel.connect()
+      else:
+        await ctx.send('No permission to join channel: ' + channel.name)
+    else:
+      await ctx.send('Please join a voice channel first!')
+  else:
+    await ctx.send('I\'m already connected to a voice channel!')
+
+    
+@client.command()
+async def leave(ctx):
+  voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+  if(voice != None):
+    await ctx.send('Left channel: '+ voice.name)
+    return await voice.disconnect()
+
+  return await ctx.send("I am not connected to any voice channel on this server!")
 
 @emote.error
 async def emote_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        message = "Requires both channel name and emote name (in that order)"
-    else:
-        message = "Unknown error occured with command!"
-        raise error
+  if isinstance(error, commands.MissingRequiredArgument):
+      message = "Requires both channel name and emote name (in that order)"
+  else:
+      message = "Unknown error occured with command!"
+      raise error
 
-    await ctx.send(message, delete_after=5)
-    await ctx.message.delete(delay=5)
+  await ctx.send(message, delete_after=5)
+  await ctx.message.delete(delay=5)
 
 @_global.error
 async def global_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        message = "Missing emote name"
-    else:
-        message = "Unknown error occured with command!"
-        raise error
+  if isinstance(error, commands.MissingRequiredArgument):
+      message = "Missing emote name"
+  else:
+      message = "Unknown error occured with command!"
+      raise error
 
-    await ctx.send(message, delete_after=5)
-    await ctx.message.delete(delay=5)
+  await ctx.send(message, delete_after=5)
+  await ctx.message.delete(delay=5)
 
+
+@join.error
+async def join_error(ctx, error):
+  message = "An error occured!"
+  raise error
+
+  await ctx.send(message, delete_after=5)
+  await ctx.message.delete(delay=5)
+
+@leave.error
+async def leave_error(ctx, error):
+  message = "An error occured!"
+  raise error
+
+  await ctx.send(message, delete_after=5)
+  await ctx.message.delete(delay=5)
 keep_alive()
 client.run(os.getenv("DISCORD_TOKEN"))
