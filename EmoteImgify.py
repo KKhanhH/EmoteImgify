@@ -227,7 +227,29 @@ async def _global(ctx, emote_name):
 
 @client.command()
 async def help(ctx):
-  await ctx.send("``` HELP \n^emote <Twitch Channel> <Emote> Grab an emote for a specific Twitch channel and send it as an image. Supports Twitch sub emotes, BTTV, and FFZ. \n^global <Emote> Grab an emote from global emotes and send it as an image. Supports Twitch emotes, BTTV, and FFZ.``` \n^join Joins a voice channel \n^leave Leaves a voice channel```")
+
+  helpArr = [
+    ['^help',
+    '',
+    '-Shows this command!'],
+   ['^emote',
+    '<Channel> <Emote>',
+    '-Grab an emote for Twitch channel and sends as an image. Supports sub emotes, BTTV, and FFZ.'],
+  ['^global',
+   '<Emote>',
+   '-Grab an emote from global list and send it as an image. Supports Twitch emotes, BTTV, and FFZ.'],
+   ['^join',
+    '',
+    '-Joins a voice channel'],
+   ['^leave',
+    '',
+    '-Leaves a voice channel']]
+  
+  helpStr = "```"
+  for row in helpArr:
+    helpStr += "{: <8} {: <20} {: <20}\n".format(*row)
+  helpStr += "```"
+  await ctx.send(helpStr)
 
 @client.command()
 async def join(ctx):
